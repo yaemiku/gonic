@@ -334,7 +334,7 @@ func (c *Controller) ServeGetRandomSongs(r *http.Request) *spec.Response {
 		q = q.Joins("JOIN track_genres ON track_genres.track_id=tracks.id")
 		q = q.Joins("JOIN genres ON genres.id=track_genres.genre_id AND genres.name=?", genre)
 	}
-	if m := getMusicFolder(c.musicPaths, params); m != "" {
+	if m := getMusicFolder(c, params); m != "" {
 		q = q.Where("albums.root_dir=?", m)
 	}
 	if err := q.Find(&tracks).Error; err != nil {
@@ -777,10 +777,11 @@ func scrobbleStatsUpdatePodcastEpisode(dbc *db.DB, peID int) error {
 	return nil
 }
 
-func getMusicFolder(musicPaths []MusicPath, p params.Params) string {
+func getMusicFolder(c *Controller, p params.Params) string {
+	musicPaths := c.musicPaths
 	idx, err := p.GetInt("musicFolderId")
 	if err != nil {
-		return ""
+		return c.defaultMusicPath
 	}
 	if idx < 0 || idx >= len(musicPaths) {
 		return os.DevNull

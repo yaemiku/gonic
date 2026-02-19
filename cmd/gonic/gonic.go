@@ -62,6 +62,7 @@ func main() {
 
 	var confMusicPaths pathAliases
 	flag.Var(&confMusicPaths, "music-path", "path to music")
+	defaultMusicPath := flag.String("default-music-path", "", "interval (in minutes) to automatically scan music (optional)")
 
 	confPlaylistsPath := flag.String("playlists-path", "", "path to your list of new or existing m3u playlists that gonic can manage")
 
@@ -256,7 +257,7 @@ func main() {
 	if err != nil {
 		log.Panicf("error creating admin controller: %v\n", err)
 	}
-	ctrlSubsonic, err := ctrlsubsonic.New(dbc, scannr, musicPaths, *confPodcastPath, cacheDirAudio, cacheDirCovers, jukebx, playlistStore, scrobblers, podcast, transcoder, lastfmClient, artistInfoCache, albumInfoCache, tagReader, resolveProxyPath)
+	ctrlSubsonic, err := ctrlsubsonic.New(dbc, scannr, musicPaths, *defaultMusicPath, *confPodcastPath, cacheDirAudio, cacheDirCovers, jukebx, playlistStore, scrobblers, podcast, transcoder, lastfmClient, artistInfoCache, albumInfoCache, tagReader, resolveProxyPath)
 	if err != nil {
 		log.Panicf("error creating subsonic controller: %v\n", err)
 	}

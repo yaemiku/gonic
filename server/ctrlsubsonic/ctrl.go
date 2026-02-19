@@ -53,44 +53,46 @@ type ProxyPathResolver func(in string) string
 type Controller struct {
 	*http.ServeMux
 
-	dbc             *db.DB
-	scanner         *scanner.Scanner
-	musicPaths      []MusicPath
-	podcastsPath    string
-	cacheAudioPath  string
-	cacheCoverPath  string
-	jukebox         *jukebox.Jukebox
-	playlistStore   *playlist.Store
-	scrobblers      []scrobble.Scrobbler
-	podcasts        *podcast.Podcasts
-	transcoder      transcode.Transcoder
-	lastFMClient    *lastfm.Client
-	artistInfoCache *artistinfocache.ArtistInfoCache
-	albumInfoCache  *albuminfocache.AlbumInfoCache
-	tagReader       tags.Reader
+	dbc              *db.DB
+	scanner          *scanner.Scanner
+	musicPaths       []MusicPath
+	defaultMusicPath string
+	podcastsPath     string
+	cacheAudioPath   string
+	cacheCoverPath   string
+	jukebox          *jukebox.Jukebox
+	playlistStore    *playlist.Store
+	scrobblers       []scrobble.Scrobbler
+	podcasts         *podcast.Podcasts
+	transcoder       transcode.Transcoder
+	lastFMClient     *lastfm.Client
+	artistInfoCache  *artistinfocache.ArtistInfoCache
+	albumInfoCache   *albuminfocache.AlbumInfoCache
+	tagReader        tags.Reader
 
 	resolveProxyPath ProxyPathResolver
 }
 
-func New(dbc *db.DB, scannr *scanner.Scanner, musicPaths []MusicPath, podcastsPath string, cacheAudioPath string, cacheCoverPath string, jukebox *jukebox.Jukebox, playlistStore *playlist.Store, scrobblers []scrobble.Scrobbler, podcasts *podcast.Podcasts, transcoder transcode.Transcoder, lastFMClient *lastfm.Client, artistInfoCache *artistinfocache.ArtistInfoCache, albumInfoCache *albuminfocache.AlbumInfoCache, tagReader tags.Reader, resolveProxyPath ProxyPathResolver) (*Controller, error) {
+func New(dbc *db.DB, scannr *scanner.Scanner, musicPaths []MusicPath, defaultMusicPath string, podcastsPath string, cacheAudioPath string, cacheCoverPath string, jukebox *jukebox.Jukebox, playlistStore *playlist.Store, scrobblers []scrobble.Scrobbler, podcasts *podcast.Podcasts, transcoder transcode.Transcoder, lastFMClient *lastfm.Client, artistInfoCache *artistinfocache.ArtistInfoCache, albumInfoCache *albuminfocache.AlbumInfoCache, tagReader tags.Reader, resolveProxyPath ProxyPathResolver) (*Controller, error) {
 	c := Controller{
 		ServeMux: http.NewServeMux(),
 
-		dbc:             dbc,
-		scanner:         scannr,
-		musicPaths:      musicPaths,
-		podcastsPath:    podcastsPath,
-		cacheAudioPath:  cacheAudioPath,
-		cacheCoverPath:  cacheCoverPath,
-		jukebox:         jukebox,
-		playlistStore:   playlistStore,
-		scrobblers:      scrobblers,
-		podcasts:        podcasts,
-		transcoder:      transcoder,
-		lastFMClient:    lastFMClient,
-		artistInfoCache: artistInfoCache,
-		albumInfoCache:  albumInfoCache,
-		tagReader:       tagReader,
+		dbc:              dbc,
+		scanner:          scannr,
+		musicPaths:       musicPaths,
+		defaultMusicPath: defaultMusicPath,
+		podcastsPath:     podcastsPath,
+		cacheAudioPath:   cacheAudioPath,
+		cacheCoverPath:   cacheCoverPath,
+		jukebox:          jukebox,
+		playlistStore:    playlistStore,
+		scrobblers:       scrobblers,
+		podcasts:         podcasts,
+		transcoder:       transcoder,
+		lastFMClient:     lastFMClient,
+		artistInfoCache:  artistInfoCache,
+		albumInfoCache:   albumInfoCache,
+		tagReader:        tagReader,
 
 		resolveProxyPath: resolveProxyPath,
 	}

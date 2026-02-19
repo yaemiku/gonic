@@ -33,7 +33,7 @@ func (c *Controller) ServeGetArtists(r *http.Request) *spec.Response {
 		Preload("Info").
 		Group("artists.id").
 		Order("artists.name COLLATE NOCASE")
-	if m := getMusicFolder(c.musicPaths, params); m != "" {
+	if m := getMusicFolder(c, params); m != "" {
 		q = q.
 			Joins("JOIN albums ON albums.id=album_artists.album_id").
 			Where("albums.root_dir=?", m)
@@ -186,7 +186,7 @@ func (c *Controller) ServeGetAlbumListTwo(r *http.Request) *spec.Response {
 	default:
 		return spec.NewError(10, "unknown value %q for parameter 'type'", listType)
 	}
-	if m := getMusicFolder(c.musicPaths, params); m != "" {
+	if m := getMusicFolder(c, params); m != "" {
 		q = q.Where("root_dir=?", m)
 	}
 	var albums []*db.Album
@@ -254,7 +254,7 @@ func (c *Controller) ServeSearchThree(r *http.Request) *spec.Response {
 		Preload("Info").
 		Offset(params.GetOrInt("artistOffset", 0)).
 		Limit(params.GetOrInt("artistCount", 20))
-	if m := getMusicFolder(c.musicPaths, params); m != "" {
+	if m := getMusicFolder(c, params); m != "" {
 		q = q.Where("albums.root_dir=?", m)
 	}
 	if err := q.Find(&artists).Error; err != nil {
@@ -283,7 +283,7 @@ func (c *Controller) ServeSearchThree(r *http.Request) *spec.Response {
 	q = q.
 		Offset(params.GetOrInt("albumOffset", 0)).
 		Limit(params.GetOrInt("albumCount", 20))
-	if m := getMusicFolder(c.musicPaths, params); m != "" {
+	if m := getMusicFolder(c, params); m != "" {
 		q = q.Where("root_dir=?", m)
 	}
 	if err := q.Find(&albums).Error; err != nil {
@@ -311,7 +311,7 @@ func (c *Controller) ServeSearchThree(r *http.Request) *spec.Response {
 	}
 	q = q.Offset(params.GetOrInt("songOffset", 0)).
 		Limit(params.GetOrInt("songCount", 20))
-	if m := getMusicFolder(c.musicPaths, params); m != "" {
+	if m := getMusicFolder(c, params); m != "" {
 		q = q.
 			Joins("JOIN albums ON albums.id=tracks.album_id").
 			Where("albums.root_dir=?", m)
@@ -482,7 +482,7 @@ func (c *Controller) ServeGetSongsByGenre(r *http.Request) *spec.Response {
 		Preload("TrackRating", "user_id=?", user.ID).
 		Offset(params.GetOrInt("offset", 0)).
 		Limit(params.GetOrInt("count", 10))
-	if m := getMusicFolder(c.musicPaths, params); m != "" {
+	if m := getMusicFolder(c, params); m != "" {
 		q = q.Where("albums.root_dir=?", m)
 	}
 	q = q.Group("tracks.id")
@@ -523,7 +523,7 @@ func (c *Controller) ServeGetStarredTwo(r *http.Request) *spec.Response {
 		Preload("ArtistRating", "user_id=?", user.ID).
 		Preload("Info").
 		Group("artists.id")
-	if m := getMusicFolder(c.musicPaths, params); m != "" {
+	if m := getMusicFolder(c, params); m != "" {
 		q = q.Where("albums.root_dir=?", m)
 	}
 	if err := q.Find(&artists).Error; err != nil {
@@ -544,7 +544,7 @@ func (c *Controller) ServeGetStarredTwo(r *http.Request) *spec.Response {
 		Preload("AlbumStar", "user_id=?", user.ID).
 		Preload("AlbumRating", "user_id=?", user.ID).
 		Preload("Play", "user_id=?", user.ID)
-	if m := getMusicFolder(c.musicPaths, params); m != "" {
+	if m := getMusicFolder(c, params); m != "" {
 		q = q.Where("albums.root_dir=?", m)
 	}
 	if err := q.Find(&albums).Error; err != nil {
@@ -565,7 +565,7 @@ func (c *Controller) ServeGetStarredTwo(r *http.Request) *spec.Response {
 		Preload("Artists").
 		Preload("TrackStar", "user_id=?", user.ID).
 		Preload("TrackRating", "user_id=?", user.ID)
-	if m := getMusicFolder(c.musicPaths, params); m != "" {
+	if m := getMusicFolder(c, params); m != "" {
 		q = q.
 			Joins("JOIN albums ON albums.id=tracks.album_id").
 			Where("albums.root_dir=?", m)
