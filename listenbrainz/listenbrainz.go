@@ -2,6 +2,7 @@ package listenbrainz
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,11 +31,15 @@ type Client struct {
 }
 
 func NewClient() *Client {
-	// disable keep-alive to avoid "connection reset by peer" errors caused by a race between
-	// the server closing idle connections and the client reusing them for new requests
+	// disable post-quantum key exchange (Kyber) to avoid "connection reset by peer" errors.
+	// listenbrainz's server can't handle the larger TLS ClientHello
+	// https://github.com/golang/go/issues/70139
 	return NewClientCustom(&http.Client{
 		Transport: &http.Transport{
-			DisableKeepAlives: true,
+			TLSClientConfig: &tls.Config{
+				MinVersion:       tls.VersionTLS12,
+				CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384},
+			},
 		},
 	})
 }
