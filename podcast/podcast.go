@@ -81,13 +81,17 @@ func (p *Podcasts) AddNewPodcast(rssURL string, feed *gofeed.Feed) (*db.Podcast,
 	if err != nil {
 		return nil, fmt.Errorf("find unique podcast dir: %w", err)
 	}
+	var author string
+	if feed.ITunesExt != nil {
+		author = feed.ITunesExt.Author
+	}
 	podcast := db.Podcast{
 		Description: feed.Description,
 		ImageURL:    "",
 		Title:       feed.Title,
 		URL:         rssURL,
 		RootDir:     rootDir,
-		Author:      feed.ITunesExt.Author,
+		Author:      author,
 	}
 	if feed.Image != nil {
 		podcast.ImageURL = feed.Image.URL
@@ -226,6 +230,10 @@ func (p *Podcasts) isAudio(rawItemURL string) (bool, error) {
 }
 
 func itemToEpisode(podcast *db.Podcast, size, duration int, audio string, item *gofeed.Item) *db.PodcastEpisode {
+	author := podcast.Author
+	if item.ITunesExt != nil {
+		author = cmp.Or(item.ITunesExt.Author, podcast.Author)
+	}
 	return &db.PodcastEpisode{
 		PodcastID:   podcast.ID,
 		Description: item.Description,
@@ -235,7 +243,7 @@ func itemToEpisode(podcast *db.Podcast, size, duration int, audio string, item *
 		PublishDate: item.PublishedParsed,
 		AudioURL:    audio,
 		Status:      db.PodcastEpisodeStatusSkipped,
-		Artist:      cmp.Or(item.ITunesExt.Author, podcast.Author),
+		Artist:      cmp.Or(author),
 		Album:       podcast.Title,
 	}
 }
@@ -508,6 +516,13 @@ func (p *Podcasts) doPodcastDownload(podcast *db.Podcast, podcastEpisode *db.Pod
 	}
 	defer resp.Body.Close()
 
+	defer func() {
+		if err != nil {
+			podcastEpisode.Status = db.PodcastEpisodeStatusError
+			_ = p.db.Save(podcastEpisode).Error
+		}
+	}()
+
 	if resp.StatusCode/100 != 2 {
 		return fmt.Errorf("fetch podcast audio: unexpected status %s", resp.Status)
 	}
@@ -528,13 +543,6 @@ func (p *Podcasts) doPodcastDownload(podcast *db.Podcast, podcastEpisode *db.Pod
 		return fmt.Errorf("create audio file: %w", err)
 	}
 	defer file.Close()
-
-	defer func() {
-		if err != nil {
-			podcastEpisode.Status = db.PodcastEpisodeStatusError
-			_ = p.db.Save(podcastEpisode).Error
-		}
-	}()
 
 	if _, err := io.Copy(file, resp.Body); err != nil {
 		return fmt.Errorf("writing podcast episode: %w", err)
