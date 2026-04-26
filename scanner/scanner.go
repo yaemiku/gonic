@@ -372,20 +372,30 @@ func (s *Scanner) scanDir(st *State, absPath string) error {
 		return nil
 	}
 
+	// read tags outside the transaction to avoid holding db locks during disk i/o
+	type trackTagData struct {
+		trackUpdate
+		trprops tags.Properties
+		trags   tags.Tags
+	}
+	tagData := make([]trackTagData, 0, len(trackUpdates))
+	for _, t := range trackUpdates {
+		trprops, trags, err := s.tagReader.Read(t.absPath)
+		if err != nil {
+			return fmt.Errorf("read %q: %w: %w", t.basename, err, ErrReadingTags)
+		}
+		tagData = append(tagData, trackTagData{trackUpdate: t, trprops: trprops, trags: trags})
+	}
+
 	return s.db.Transaction(func(tx *db.DB) error {
 		var discTitles = map[int]string{}
-		for _, t := range trackUpdates {
-			trprops, trags, err := s.tagReader.Read(t.absPath)
-			if err != nil {
-				return fmt.Errorf("read %q: %w: %w", t.basename, err, ErrReadingTags)
-			}
-
-			if err := s.populateTrackAndArtists(tx, st, t.i, &album, t.track, t.timeSpec, trprops, trags, t.basename, t.absPath); err != nil {
+		for _, t := range tagData {
+			if err := s.populateTrackAndArtists(tx, st, t.i, &album, t.track, t.timeSpec, t.trprops, t.trags, t.basename, t.absPath); err != nil {
 				return fmt.Errorf("populate track %q: %w", t.basename, err)
 			}
 
-			discNum := cmp.Or(tags.ParseInt(normtag.Get(trags, normtag.DiscNumber)), 1)
-			discSubtitle := normtag.Get(trags, "DISCSUBTITLE")
+			discNum := cmp.Or(tags.ParseInt(normtag.Get(t.trags, normtag.DiscNumber)), 1)
+			discSubtitle := normtag.Get(t.trags, "DISCSUBTITLE")
 
 			if _, exists := discTitles[discNum]; !exists && discSubtitle != "" {
 				discTitles[discNum] = discSubtitle
@@ -473,6 +483,14 @@ func (s *Scanner) populateTrackAndArtists(tx *db.DB, st *State, i int, album *db
 
 	if err := populateArtistAppearances(tx, album, trackArtistIDs); err != nil {
 		return fmt.Errorf("populate track artists: %w", err)
+	}
+
+	contributorIDs, err := populateTrackContributors(tx, track, trags)
+	if err != nil {
+		return fmt.Errorf("populate track contributors: %w", err)
+	}
+	if err := populateArtistAppearances(tx, album, contributorIDs); err != nil {
+		return fmt.Errorf("populate contributor appearances: %w", err)
 	}
 
 	// possible album level embedded covers come only from the first track
@@ -674,6 +692,46 @@ func populateAlbumArtists(tx *db.DB, album *db.Album, albumArtistIDs []int) erro
 		return fmt.Errorf("insert bulk album artists: %w", err)
 	}
 	return nil
+}
+
+//nolint:gochecknoglobals
+var contributorTagKeys = []struct {
+	keys []string
+	role db.ContributorRole
+}{
+	{[]string{normtag.Remixers, normtag.Remixer}, db.ContributorRoleRemixer},
+	{[]string{normtag.Composers, normtag.Composer}, db.ContributorRoleComposer},
+	{[]string{normtag.Lyricists, normtag.Lyricist}, db.ContributorRoleLyricist},
+	{[]string{normtag.Conductors, normtag.Conductor}, db.ContributorRoleConductor},
+	{[]string{normtag.Producers, normtag.Producer}, db.ContributorRoleProducer},
+	{[]string{normtag.Arrangers, normtag.Arranger}, db.ContributorRoleArranger},
+}
+
+func populateTrackContributors(tx *db.DB, track *db.Track, trags tags.Tags) ([]int, error) {
+	if err := tx.Where("track_id=?", track.ID).Delete(db.TrackContributor{}).Error; err != nil {
+		return nil, fmt.Errorf("delete old track contributors: %w", err)
+	}
+
+	var rows [][]any
+	var artistIDs []int
+	for _, rk := range contributorTagKeys {
+		for _, name := range tags.FirstValues(trags, rk.keys...) {
+			if name == "" {
+				continue
+			}
+			artist, err := populateArtist(tx, name)
+			if err != nil {
+				return nil, fmt.Errorf("populate contributor artist: %w", err)
+			}
+			rows = append(rows, []any{artist.ID, string(rk.role)})
+			artistIDs = append(artistIDs, artist.ID)
+		}
+	}
+
+	if err := tx.InsertBulkLeftManyRows("track_contributors", []string{"track_id", "artist_id", "role"}, track.ID, rows); err != nil {
+		return nil, fmt.Errorf("insert bulk track contributors: %w", err)
+	}
+	return artistIDs, nil
 }
 
 func populateTrackArtists(tx *db.DB, track *db.Track, trackArtistIDs []int) error {

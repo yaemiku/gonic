@@ -80,8 +80,9 @@ func (a *ArtistInfoCache) Lookup(ctx context.Context, artist *db.Artist) (*db.Ar
 	}
 	artistInfo.SetSimilarArtists(similar)
 
-	url, _ := a.lastfmClient.StealArtistImage(info.URL)
-	artistInfo.ImageURL = url
+	if url, _ := a.lastfmClient.StealArtistImage(info.URL); url != "" {
+		artistInfo.ImageURL = url
+	}
 
 	topTracksResponse, err := a.lastfmClient.ArtistGetTopTracks(artist.Name)
 	if err != nil {
