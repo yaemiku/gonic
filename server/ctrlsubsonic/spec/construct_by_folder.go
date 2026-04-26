@@ -20,7 +20,7 @@ func NewAlbumByFolder(f *db.Album) *Album {
 		TrackCount:    f.ChildCount,
 		Duration:      f.Duration,
 		Created:       f.CreatedAt,
-		AverageRating: formatRating(f.AverageRating),
+		AverageRating: f.AverageRating,
 		ReleaseTypes:  []string{},
 	}
 	if f.AlbumStar != nil {
@@ -44,7 +44,7 @@ func NewTCAlbumByFolder(f *db.Album) *TrackChild {
 		Title:         f.RightPath,
 		ParentID:      f.ParentSID(),
 		CreatedAt:     f.CreatedAt,
-		AverageRating: formatRating(f.AverageRating),
+		AverageRating: f.AverageRating,
 		Year:          f.TagYear,
 	}
 	if f.AlbumStar != nil {
@@ -84,7 +84,7 @@ func NewTCTrackByFolder(t *db.Track, parent *db.Album) *TrackChild {
 		Type:          "music",
 		MusicBrainzID: t.TagBrainzID,
 		CreatedAt:     t.CreatedAt,
-		AverageRating: formatRating(t.AverageRating),
+		AverageRating: t.AverageRating,
 		Year:          t.TagYear,
 	}
 	if trCh.Title == "" {
@@ -170,7 +170,7 @@ func NewArtistByFolder(f *db.Album) *Artist {
 		ID:            f.SID(),
 		Name:          f.RightPath,
 		AlbumCount:    f.ChildCount,
-		AverageRating: formatRating(f.AverageRating),
+		AverageRating: f.AverageRating,
 	}
 	if f.AlbumStar != nil {
 		a.Starred = &f.AlbumStar.StarDate
@@ -192,7 +192,7 @@ func NewDirectoryByFolder(f *db.Album, children []*TrackChild) *Directory {
 		Name:          f.RightPath,
 		Children:      children,
 		ParentID:      f.ParentSID(),
-		AverageRating: formatRating(f.AverageRating),
+		AverageRating: f.AverageRating,
 	}
 	if f.AlbumStar != nil {
 		d.Starred = &f.AlbumStar.StarDate

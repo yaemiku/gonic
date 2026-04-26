@@ -125,6 +125,12 @@ type GenreRef struct {
 	Name string `xml:"name,attr" json:"name"`
 }
 
+// https://opensubsonic.netlify.app/docs/responses/contributor/
+type Contributor struct {
+	Role   string     `xml:"role,attr"    json:"role"`
+	Artist *ArtistRef `xml:"artist"       json:"artist"`
+}
+
 type DiscTitle struct {
 	Disc  int    `xml:"disc,attr" json:"disc"`
 	Title string `xml:"title,attr" json:"title"`
@@ -165,7 +171,7 @@ type Album struct {
 	// star / rating
 	Starred       *time.Time `xml:"starred,attr,omitempty"         json:"starred,omitempty"`
 	UserRating    int        `xml:"userRating,attr,omitempty"      json:"userRating,omitempty"`
-	AverageRating string     `xml:"averageRating,attr,omitempty"   json:"averageRating,omitempty"`
+	AverageRating float64    `xml:"averageRating,attr,omitempty"   json:"averageRating,omitempty"`
 }
 
 type RandomTracks struct {
@@ -204,6 +210,9 @@ type TrackChild struct {
 	AlbumArtists       []*ArtistRef `xml:"albumArtists"           json:"albumArtists"`
 	AlbumDisplayArtist string       `xml:"displayAlbumArtist,attr" json:"displayAlbumArtist"`
 
+	Contributors    []*Contributor `xml:"contributors"            json:"contributors"`
+	DisplayComposer string         `xml:"displayComposer,attr"    json:"displayComposer"`
+
 	Bitrate     int         `xml:"bitRate,attr,omitempty"     json:"bitRate,omitempty"`
 	ContentType string      `xml:"contentType,attr,omitempty" json:"contentType,omitempty"`
 	CoverID     *specid.ID  `xml:"coverArt,attr,omitempty"    json:"coverArt,omitempty"`
@@ -228,7 +237,7 @@ type TrackChild struct {
 	// star / rating
 	Starred       *time.Time `xml:"starred,attr,omitempty"         json:"starred,omitempty"`
 	UserRating    int        `xml:"userRating,attr,omitempty"      json:"userRating,omitempty"`
-	AverageRating string     `xml:"averageRating,attr,omitempty"   json:"averageRating,omitempty"`
+	AverageRating float64    `xml:"averageRating,attr,omitempty"   json:"averageRating,omitempty"`
 
 	ReplayGain *ReplayGain `xml:"replayGain" json:"replayGain"`
 
@@ -249,7 +258,7 @@ type Artist struct {
 	// star / rating
 	Starred       *time.Time `xml:"starred,attr,omitempty"       json:"starred,omitempty"`
 	UserRating    int        `xml:"userRating,attr,omitempty"    json:"userRating,omitempty"`
-	AverageRating string     `xml:"averageRating,attr,omitempty" json:"averageRating,omitempty"`
+	AverageRating float64    `xml:"averageRating,attr,omitempty" json:"averageRating,omitempty"`
 }
 
 type Indexes struct {
@@ -269,7 +278,7 @@ type Directory struct {
 	Name          string        `xml:"name,attr,omitempty"            json:"name"`
 	Starred       *time.Time    `xml:"starred,attr,omitempty"         json:"starred,omitempty"`
 	UserRating    int           `xml:"userRating,attr,omitempty"      json:"userRating,omitempty"`
-	AverageRating string        `xml:"averageRating,attr,omitempty"   json:"averageRating,omitempty"`
+	AverageRating float64       `xml:"averageRating,attr,omitempty"   json:"averageRating,omitempty"`
 	Children      []*TrackChild `xml:"child,omitempty"                json:"child,omitempty"`
 }
 
@@ -506,13 +515,6 @@ type OpenSubsonicExtension struct {
 }
 
 type OpenSubsonicExtensions []OpenSubsonicExtension
-
-func formatRating(rating float64) string {
-	if rating == 0 {
-		return ""
-	}
-	return fmt.Sprintf("%.2f", rating)
-}
 
 func formatExt(ext string) string {
 	return strings.TrimPrefix(ext, ".")

@@ -113,6 +113,7 @@ func (c *Controller) ServeGetAlbum(r *http.Request) *spec.Response {
 			return db.
 				Order("tracks.tag_disc_number, tracks.tag_track_number").
 				Preload("Artists").
+				Preload("Contributors.Artist").
 				Preload("TrackStar", "user_id=?", user.ID).
 				Preload("TrackRating", "user_id=?", user.ID)
 		}).
@@ -154,24 +155,24 @@ func (c *Controller) ServeGetAlbumListTwo(r *http.Request) *spec.Response {
 		q = q.Joins("JOIN artists ON artists.id=album_artists.artist_id")
 		q = q.Order("artists.name")
 	case "alphabeticalByName":
-		q = q.Order("tag_title")
+		q = q.Order("albums.tag_title")
 	case "byYear":
 		y1, y2 := params.GetOrInt("fromYear", 1800),
 			params.GetOrInt("toYear", 2200)
 		// support some clients sending wrong order like DSub
-		q = q.Where("tag_year BETWEEN ? AND ?", min(y1, y2), max(y1, y2))
-		q = q.Order("tag_year DESC")
+		q = q.Where("albums.tag_year BETWEEN ? AND ?", min(y1, y2), max(y1, y2))
+		q = q.Order("albums.tag_year DESC")
 	case "byGenre":
 		genre, _ := params.Get("genre")
 		q = q.Joins("JOIN album_genres ON album_genres.album_id=albums.id")
 		q = q.Joins("JOIN genres ON genres.id=album_genres.genre_id AND genres.name=?", genre)
-		q = q.Order("tag_title")
+		q = q.Order("albums.tag_title")
 	case "frequent":
 		user := r.Context().Value(CtxUser).(*db.User)
 		q = q.Joins("JOIN plays ON albums.id=plays.album_id AND plays.user_id=?", user.ID)
 		q = q.Order("plays.length DESC")
 	case "newest":
-		q = q.Order("created_at DESC")
+		q = q.Order("albums.created_at DESC")
 	case "random":
 		q = q.Order(gorm.Expr("random()"))
 	case "recent":
@@ -179,7 +180,7 @@ func (c *Controller) ServeGetAlbumListTwo(r *http.Request) *spec.Response {
 		q = q.Order("plays.time DESC")
 	case "starred":
 		q = q.Joins("JOIN album_stars ON albums.id=album_stars.album_id AND album_stars.user_id=?", user.ID)
-		q = q.Order("tag_title")
+		q = q.Order("albums.tag_title")
 	case "highest":
 		q = q.Joins("JOIN album_ratings ON album_ratings.album_id=albums.id AND album_ratings.user_id=?", user.ID)
 		q = q.Order("album_ratings.rating DESC")
@@ -300,6 +301,7 @@ func (c *Controller) ServeSearchThree(r *http.Request) *spec.Response {
 		Preload("Album.Artists").
 		Preload("Genres").
 		Preload("Artists").
+		Preload("Contributors.Artist").
 		Preload("TrackStar", "user_id=?", user.ID).
 		Preload("TrackRating", "user_id=?", user.ID)
 	switch {
@@ -452,6 +454,7 @@ func (c *Controller) ServeGetGenres(_ *http.Request) *spec.Response {
 			(SELECT count(1) FROM album_genres WHERE genre_id=genres.id) album_count,
 			(SELECT count(1) FROM track_genres WHERE genre_id=genres.id) track_count`).
 		Group("genres.id").
+		Order("genres.name").
 		Find(&genres)
 	sub := spec.NewResponse()
 	sub.Genres = &spec.Genres{
@@ -478,6 +481,7 @@ func (c *Controller) ServeGetSongsByGenre(r *http.Request) *spec.Response {
 		Preload("Album").
 		Preload("Album.Artists").
 		Preload("Artists").
+		Preload("Contributors.Artist").
 		Preload("TrackStar", "user_id=?", user.ID).
 		Preload("TrackRating", "user_id=?", user.ID).
 		Offset(params.GetOrInt("offset", 0)).
@@ -563,6 +567,7 @@ func (c *Controller) ServeGetStarredTwo(r *http.Request) *spec.Response {
 		Preload("Album").
 		Preload("Album.Artists").
 		Preload("Artists").
+		Preload("Contributors.Artist").
 		Preload("TrackStar", "user_id=?", user.ID).
 		Preload("TrackRating", "user_id=?", user.ID)
 	if m := getMusicFolder(c, params); m != "" {
@@ -636,6 +641,7 @@ func (c *Controller) ServeGetTopSongs(r *http.Request) *spec.Response {
 		Where("artists.id=?", artist.ID).
 		Preload("Album").
 		Preload("Artists").
+		Preload("Contributors.Artist").
 		Preload("TrackStar", "user_id=?", user.ID).
 		Preload("TrackRating", "user_id=?", user.ID).
 		Group("tracks.id").
@@ -745,6 +751,7 @@ func getSimilarSongsFromTrack(c *Controller, id specid.ID, params params.Params,
 		Select("tracks.*").
 		Preload("Album").
 		Preload("Artists").
+		Preload("Contributors.Artist").
 		Preload("TrackStar", "user_id=?", user.ID).
 		Preload("TrackRating", "user_id=?", user.ID).
 		Where("tracks.tag_title IN (?)", similarTrackNames).
@@ -798,6 +805,7 @@ func getSimilarSongsFromArtist(c *Controller, id specid.ID, params params.Params
 	err = c.dbc.
 		Preload("Album").
 		Preload("Artists").
+		Preload("Contributors.Artist").
 		Preload("TrackStar", "user_id=?", user.ID).
 		Preload("TrackRating", "user_id=?", user.ID).
 		Joins("JOIN track_artists ON track_artists.track_id=tracks.id").
@@ -866,6 +874,7 @@ func getSimilarSongsFromAlbum(c *Controller, id specid.ID, params params.Params,
 		Select("tracks.*").
 		Preload("Album").
 		Preload("Artists").
+		Preload("Contributors.Artist").
 		Preload("TrackStar", "user_id=?", user.ID).
 		Preload("TrackRating", "user_id=?", user.ID).
 		Where("tracks.tag_title IN (?)", similarTrackNames).
