@@ -13,3 +13,6 @@ dist
 *.swp
 .tags*
 *.test
+.env
+config
+genre-tree
